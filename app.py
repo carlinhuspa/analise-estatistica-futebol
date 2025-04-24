@@ -30,10 +30,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Função para criar diretório de visualizações se não existir
-def ensure_visualization_dir():
-    os.makedirs("visualizations", exist_ok=True)
-
 # Função para processar o texto de entrada e extrair dados
 def process_input_text(text: str) -> Dict[str, Any]:
     # Extrair dados do texto
@@ -77,14 +73,15 @@ def analyze_data(processed_data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 # Função para criar visualizações
-def create_visualizations(processed_data: Dict[str, Any]) -> Dict[str, str]:
+def create_visualizations(processed_data: Dict[str, Any]) -> Dict[str, Any]:
     visualizer = FootballVisualizer(processed_data)
     all_visualizations = visualizer.create_all_visualizations()
-    saved_files = visualizer.save_visualizations(all_visualizations)
-    return saved_files
+    # Não salvamos mais as visualizações como arquivos
+    # Apenas retornamos os objetos de visualização diretamente
+    return all_visualizations
 
 # Função para exibir insights
-def display_insights(analysis: Dict[str, Any]):
+def display_insights(analysis: Dict[str, Any], visualizations: Dict[str, Any]):
     home_team = analysis.get("head_to_head", {}).get("historical_dominance", {}).get("home_team", "Mandante")
     away_team = analysis.get("head_to_head", {}).get("historical_dominance", {}).get("away_team", "Visitante")
     
@@ -109,18 +106,20 @@ def display_insights(analysis: Dict[str, Any]):
             
             # Exibir visualizações de confrontos diretos
             st.subheader("Visualizações")
+            h2h_viz = visualizations.get("head_to_head", {})
+            
             col1, col2 = st.columns(2)
             
             with col1:
-                if os.path.exists("visualizations/h2h_results_distribution.png"):
-                    st.image("visualizations/h2h_results_distribution.png")
+                if "results_distribution" in h2h_viz:
+                    st.plotly_chart(h2h_viz["results_distribution"], use_container_width=True)
             
             with col2:
-                if os.path.exists("visualizations/h2h_last_matches.png"):
-                    st.image("visualizations/h2h_last_matches.png")
+                if "last_matches" in h2h_viz:
+                    st.plotly_chart(h2h_viz["last_matches"], use_container_width=True)
             
-            if os.path.exists("visualizations/h2h_goals_stats.png"):
-                st.image("visualizations/h2h_goals_stats.png")
+            if "goals_stats" in h2h_viz:
+                st.plotly_chart(h2h_viz["goals_stats"], use_container_width=True)
         else:
             st.warning("Não foi possível gerar insights para os confrontos diretos.")
     
@@ -134,31 +133,30 @@ def display_insights(analysis: Dict[str, Any]):
             
             # Exibir visualizações de forma recente
             st.subheader("Visualizações")
+            form_viz = visualizations.get("team_form", {})
+            
             col1, col2 = st.columns(2)
             
-            home_team_safe = home_team.replace(" ", "_").lower()
-            away_team_safe = away_team.replace(" ", "_").lower()
-            
             with col1:
-                if os.path.exists(f"visualizations/form_{home_team_safe}_results_distribution.png"):
-                    st.image(f"visualizations/form_{home_team_safe}_results_distribution.png")
+                if home_team in form_viz and "results_distribution" in form_viz[home_team]:
+                    st.plotly_chart(form_viz[home_team]["results_distribution"], use_container_width=True)
                     st.caption(f"Distribuição de resultados: {home_team}")
             
             with col2:
-                if os.path.exists(f"visualizations/form_{away_team_safe}_results_distribution.png"):
-                    st.image(f"visualizations/form_{away_team_safe}_results_distribution.png")
+                if away_team in form_viz and "results_distribution" in form_viz[away_team]:
+                    st.plotly_chart(form_viz[away_team]["results_distribution"], use_container_width=True)
                     st.caption(f"Distribuição de resultados: {away_team}")
             
             col3, col4 = st.columns(2)
             
             with col3:
-                if os.path.exists(f"visualizations/form_{home_team_safe}_goals.png"):
-                    st.image(f"visualizations/form_{home_team_safe}_goals.png")
+                if home_team in form_viz and "goals" in form_viz[home_team]:
+                    st.plotly_chart(form_viz[home_team]["goals"], use_container_width=True)
                     st.caption(f"Gols nos últimos jogos: {home_team}")
             
             with col4:
-                if os.path.exists(f"visualizations/form_{away_team_safe}_goals.png"):
-                    st.image(f"visualizations/form_{away_team_safe}_goals.png")
+                if away_team in form_viz and "goals" in form_viz[away_team]:
+                    st.plotly_chart(form_viz[away_team]["goals"], use_container_width=True)
                     st.caption(f"Gols nos últimos jogos: {away_team}")
         else:
             st.warning("Não foi possível gerar insights para a forma recente.")
@@ -173,18 +171,20 @@ def display_insights(analysis: Dict[str, Any]):
             
             # Exibir visualizações de posições nas tabelas
             st.subheader("Visualizações")
+            table_viz = visualizations.get("table_positions", {})
+            
             col1, col2 = st.columns(2)
             
             with col1:
-                if os.path.exists("visualizations/table_general_positions.png"):
-                    st.image("visualizations/table_general_positions.png")
+                if "general_positions" in table_viz:
+                    st.plotly_chart(table_viz["general_positions"], use_container_width=True)
             
             with col2:
-                if os.path.exists("visualizations/table_specific_positions.png"):
-                    st.image("visualizations/table_specific_positions.png")
+                if "specific_positions" in table_viz:
+                    st.plotly_chart(table_viz["specific_positions"], use_container_width=True)
             
-            if os.path.exists("visualizations/table_direct_comparison.png"):
-                st.image("visualizations/table_direct_comparison.png")
+            if "direct_comparison" in table_viz:
+                st.plotly_chart(table_viz["direct_comparison"], use_container_width=True)
         else:
             st.warning("Não foi possível gerar insights para as posições nas tabelas.")
     
@@ -204,25 +204,27 @@ def display_insights(analysis: Dict[str, Any]):
             
             # Exibir visualizações de prognósticos
             st.subheader("Visualizações")
+            pred_viz = visualizations.get("predictions", {})
+            
             col1, col2 = st.columns(2)
             
             with col1:
-                if os.path.exists("visualizations/pred_general_predictions.png"):
-                    st.image("visualizations/pred_general_predictions.png")
+                if "general_predictions" in pred_viz:
+                    st.plotly_chart(pred_viz["general_predictions"], use_container_width=True)
             
             with col2:
-                if os.path.exists("visualizations/pred_goals_detailed.png"):
-                    st.image("visualizations/pred_goals_detailed.png")
+                if "goals_detailed" in pred_viz:
+                    st.plotly_chart(pred_viz["goals_detailed"], use_container_width=True)
             
             col3, col4 = st.columns(2)
             
             with col3:
-                if os.path.exists("visualizations/pred_corners.png"):
-                    st.image("visualizations/pred_corners.png")
+                if "corners" in pred_viz:
+                    st.plotly_chart(pred_viz["corners"], use_container_width=True)
             
             with col4:
-                if os.path.exists("visualizations/pred_first_goal.png"):
-                    st.image("visualizations/pred_first_goal.png")
+                if "first_goal" in pred_viz:
+                    st.plotly_chart(pred_viz["first_goal"], use_container_width=True)
         else:
             st.warning("Não foi possível gerar insights para os textos e prognósticos.")
     
@@ -330,9 +332,6 @@ def display_insights(analysis: Dict[str, Any]):
 def main():
     st.title("📊 Análise Estatística de Futebol")
     
-    # Criar diretório para visualizações
-    ensure_visualization_dir()
-    
     st.write("""
     Esta aplicação analisa estatísticas de futebol e gera insights detalhados para ajudar na análise de jogos.
     Cole o texto com as estatísticas do jogo no formato adequado e obtenha uma análise completa.
@@ -352,77 +351,81 @@ def main():
         else:
             # Mostrar spinner durante o processamento
             with st.spinner("Processando estatísticas..."):
-                # Processar o texto
-                processed_data = process_input_text(text_input)
-                
-                # Analisar os dados
-                analysis = analyze_data(processed_data)
-                
-                # Criar visualizações
-                visualizations = create_visualizations(processed_data)
-                
-                # Exibir insights e visualizações
-                display_insights(analysis)
-                
-                # Adicionar seção de conclusão
-                st.header("🎯 Conclusão")
-                
-                # Extrair insights principais de cada análise
-                h2h_insights = analysis.get("head_to_head", {}).get("insights", [])
-                form_insights = analysis.get("recent_form", {}).get("insights", [])
-                table_insights = analysis.get("table_positions", {}).get("insights", [])
-                text_insights = analysis.get("text_predictions", {}).get("insights", [])
-                models_insights = analysis.get("prediction_models", {}).get("insights", [])
-                
-                # Selecionar insights mais relevantes para a conclusão
-                key_insights = []
-                
-                # Adicionar insight sobre o favorito dos modelos matemáticos
-                for insight in models_insights:
-                    if "Resultado mais provável" in insight:
-                        key_insights.append(insight)
-                        break
-                
-                # Adicionar insight sobre o placar mais provável
-                for insight in models_insights:
-                    if "Placar mais provável" in insight:
-                        key_insights.append(insight)
-                        break
-                
-                # Adicionar insight sobre over/under
-                for insight in models_insights:
-                    if "Over 2.5 gols" in insight:
-                        key_insights.append(insight)
-                        break
-                
-                # Adicionar insight sobre BTTS
-                for insight in models_insights:
-                    if "ambas equipes marcarem" in insight:
-                        key_insights.append(insight)
-                        break
-                
-                # Adicionar insight sobre confrontos diretos
-                for insight in h2h_insights:
-                    if "dominância" in insight or "Histórico" in insight:
-                        key_insights.append(insight)
-                        break
-                
-                # Adicionar insight sobre forma recente
-                for insight in form_insights:
-                    if "favorito" in insight or "momento" in insight:
-                        key_insights.append(insight)
-                        break
-                
-                # Exibir insights chave
-                for insight in key_insights:
-                    st.write(f"• {insight}")
-                
-                # Adicionar nota final
-                st.info("""
-                **Nota:** Esta análise é baseada em dados históricos e modelos estatísticos. 
-                Os resultados reais podem variar devido a fatores imprevisíveis como lesões, 
-                condições climáticas, decisões de arbitragem, entre outros.
-                """)
+                try:
+                    # Processar o texto
+                    processed_data = process_input_text(text_input)
+                    
+                    # Analisar os dados
+                    analysis = analyze_data(processed_data)
+                    
+                    # Criar visualizações
+                    visualizations = create_visualizations(processed_data)
+                    
+                    # Exibir insights e visualizações
+                    display_insights(analysis, visualizations)
+                    
+                    # Adicionar seção de conclusão
+                    st.header("🎯 Conclusão")
+                    
+                    # Extrair insights principais de cada análise
+                    h2h_insights = analysis.get("head_to_head", {}).get("insights", [])
+                    form_insights = analysis.get("recent_form", {}).get("insights", [])
+                    table_insights = analysis.get("table_positions", {}).get("insights", [])
+                    text_insights = analysis.get("text_predictions", {}).get("insights", [])
+                    models_insights = analysis.get("prediction_models", {}).get("insights", [])
+                    
+                    # Selecionar insights mais relevantes para a conclusão
+                    key_insights = []
+                    
+                    # Adicionar insight sobre o favorito dos modelos matemáticos
+                    for insight in models_insights:
+                        if "Resultado mais provável" in insight:
+                            key_insights.append(insight)
+                            break
+                    
+                    # Adicionar insight sobre o placar mais provável
+                    for insight in models_insights:
+                        if "Placar mais provável" in insight:
+                            key_insights.append(insight)
+                            break
+                    
+                    # Adicionar insight sobre over/under
+                    for insight in models_insights:
+                        if "Over 2.5 gols" in insight:
+                            key_insights.append(insight)
+                            break
+                    
+                    # Adicionar insight sobre BTTS
+                    for insight in models_insights:
+                        if "ambas equipes marcarem" in insight:
+                            key_insights.append(insight)
+                            break
+                    
+                    # Adicionar insight sobre confrontos diretos
+                    for insight in h2h_insights:
+                        if "dominância" in insight or "Histórico" in insight:
+                            key_insights.append(insight)
+                            break
+                    
+                    # Adicionar insight sobre forma recente
+                    for insight in form_insights:
+                        if "favorito" in insight or "momento" in insight:
+                            key_insights.append(insight)
+                            break
+                    
+                    # Exibir insights chave
+                    for insight in key_insights:
+                        st.write(f"• {insight}")
+                    
+                    # Adicionar nota final
+                    st.info("""
+                    **Nota:** Esta análise é baseada em dados históricos e modelos estatísticos. 
+                    Os resultados reais podem variar devido a fatores imprevisíveis como lesões, 
+                    condições climáticas, decisões de arbitragem, entre outros.
+                    """)
+                except Exception as e:
+                    st.error(f"Ocorreu um erro ao processar o texto: {str(e)}")
+                    st.info("Verifique se o formato do texto está correto e tente novamente.")
 
 if __name__ == "__main__":
     main()
